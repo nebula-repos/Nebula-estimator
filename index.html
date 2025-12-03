@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nebula Consulting | Estimador</title>
+    
+    <!-- 1. Tailwind CSS (Estilos) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- 2. React y ReactDOM (El motor) -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- 3. Babel (Para entender JSX en el navegador) -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- 4. Lucide Icons (Iconos) -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+    <div id="root"></div>
+
+    <script type="text/babel">
+        // --- Componentes de Iconos (Wrapper simple para Lucide en modo standalone) ---
+        const Icon = ({ name, size = 24, className = "" }) => {
+            const icons = {
+                Calculator: <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect width="16" height="20" x="4" y="2" rx="2"/><line x1="8" x2="16" y1="6" y2="6"/><line x1="16" x2="16" y1="14" y2="18"/><path d="M16 10h.01"/><path d="M12 10h.01"/><path d="M8 10h.01"/><path d="M12 14h.01"/><path d="M8 14h.01"/><path d="M12 18h.01"/><path d="M8 18h.01"/></svg>,
+                Calendar: <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>,
+                DollarSign: <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>,
+                Clock: <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
+                Users: <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
+                Briefcase: <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect width="20" height="14" x="2" y="7" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>,
+                TrendingUp: <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>,
+                ChevronRight: <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m9 18 6-6-6-6"/></svg>,
+                Coins: <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="8" cy="8" r="6"/><path d="M18.09 10.37A6 6 0 1 1 10.34 18"/><path d="M7 6h1v4"/><path d="m16.71 13.88.7.71-2.82 2.82"/></svg>
+            };
+            return icons[name] || null;
+        };
+
+        // --- AQUI COMIENZA TU APP ---
+        const { useState, useMemo } = React;
+
+        const NebulaEstimator = () => {
+            // --- Estados de Configuración ---
+            const [unit, setUnit] = useState('hours'); 
+            const [currency, setCurrency] = useState('CLP'); // Cambiado a CLP por defecto
+            const [hoursPerDay, setHoursPerDay] = useState(8);
+            const [ufValue, setUfValue] = useState(38000); // Valor UF referencial
+            
+            // --- Estados de Tarifas (Siempre se almacenan como Valor HORA internamente) ---
+            const [rates, setRates] = useState({
+                consultant: 60000, 
+                developer: 45000   
+            });
+
+            // --- Estado del Factor de Valor (Value Pricing) ---
+            const [valueFactor, setValueFactor] = useState(1.3);
+
+            // --- Estados de las Fases del Proyecto ---
+            const [phases, setPhases] = useState([
+                { id: 1, name: 'Levantamiento', consultant: 10, developer: 2 },
+                { id: 2, name: 'Desarrollo', consultant: 5, developer: 40 },
+                { id: 3, name: 'QA (Calidad)', consultant: 2, developer: 10 },
+                { id: 4, name: 'Documentación', consultant: 4, developer: 4 },
+                { id: 5, name: 'Delivery Final', consultant: 4, developer: 2 },
+            ]);
+
+            // --- Función de Conversión Inteligente ---
+            const toggleUnit = (newUnit) => {
+                if (newUnit === unit) return;
+
+                const multiplier = newUnit === 'days' ? (1 / hoursPerDay) : hoursPerDay;
+                
+                // Convertimos todos los valores de esfuerzo actuales
+                const newPhases = phases.map(p => ({
+                    ...p,
+                    consultant: parseFloat((p.consultant * multiplier).toFixed(2)),
+                    developer: parseFloat((p.developer * multiplier).toFixed(2))
+                }));
+
+                setPhases(newPhases);
+                setUnit(newUnit);
+            };
+
+            // --- Funciones de Ayuda ---
+            const formatMoney = (amount) => {
+                return new Intl.NumberFormat('es-CL', { // Formato chileno
+                    style: 'currency',
+                    currency: currency,
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0,
+                }).format(amount);
+            };
+
+            const formatUF = (amount) => {
+                return new Intl.NumberFormat('es-CL', {
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0,
+                }).format(Math.round(amount));
+            };
+
+            const handlePhaseChange = (id, field, value) => {
+                const numValue = value === '' ? 0 : parseFloat(value);
+                setPhases(phases.map(p => p.id === id ? { ...p, [field]: numValue } : p));
+            };
+
+            const handleRateChange = (role, value) => {
+                const numValue = parseFloat(value) || 0;
+                // Si estamos en modo "Días", el usuario ingresa valor diario, pero guardamos valor hora
+                const hourlyRate = unit === 'days' ? (numValue / hoursPerDay) : numValue;
+                setRates({ ...rates, [role]: hourlyRate });
+            };
+
+            // --- Cálculos Matemáticos ---
+            const calculations = useMemo(() => {
+                let totalConsultantTime = 0;
+                let totalDevTime = 0;
+                let costConsultant = 0;
+                let costDev = 0;
+
+                phases.forEach(p => {
+                    const costMultiplier = unit === 'days' ? hoursPerDay : 1;
+                    
+                    const pConsHours = p.consultant * costMultiplier;
+                    const pDevHours = p.developer * costMultiplier;
+
+                    totalConsultantTime += pConsHours; 
+                    totalDevTime += pDevHours;
+                    
+                    costConsultant += pConsHours * rates.consultant;
+                    costDev += pDevHours * rates.developer;
+                });
+
+                const totalBaseCost = costConsultant + costDev;
+                const finalPrice = totalBaseCost * valueFactor;
+                const profit = finalPrice - totalBaseCost;
+                const totalHours = totalConsultantTime + totalDevTime;
+                
+                const estimatedWeeks = (totalHours / hoursPerDay / 5 / 1.2).toFixed(1);
+                
+                // Cálculo de UF
+                const totalUF = finalPrice / ufValue;
+
+                return {
+                    totalConsultantTime,
+                    totalDevTime,
+                    costConsultant,
+                    costDev,
+                    totalBaseCost,
+                    finalPrice,
+                    profit,
+                    totalHours,
+                    estimatedWeeks,
+                    totalUF
+                };
+            }, [phases, rates, unit, hoursPerDay, valueFactor, ufValue]);
+
+            return (
+                <div className="min-h-screen bg-slate-50 text-slate-800 font-sans p-4 md:p-8">
+                <div className="max-w-6xl mx-auto space-y-6">
+                    
+                    {/* Header */}
+                    <header className="flex flex-col md:flex-row justify-between items-center bg-indigo-900 text-white p-6 rounded-xl shadow-lg">
+                    <div className="flex items-center space-x-3 mb-4 md:mb-0">
+                        <div className="bg-indigo-500 p-2 rounded-lg">
+                        <Icon name="Calculator" size={28} className="text-white" />
+                        </div>
+                        <div>
+                        <h1 className="text-2xl font-bold tracking-tight">Nebula Consulting</h1>
+                        <p className="text-indigo-200 text-sm">Estimador de Proyectos & Pricing</p>
+                        </div>
+                    </div>
+                    <div className="flex items-center space-x-4 bg-indigo-800 p-2 rounded-lg">
+                        <span className="text-sm font-medium px-2">Unidad:</span>
+                        <button 
+                        onClick={() => toggleUnit('hours')}
+                        className={`px-4 py-1 rounded-md transition-colors ${unit === 'hours' ? 'bg-white text-indigo-900 font-bold' : 'text-indigo-200 hover:text-white'}`}
+                        >
+                        Horas
+                        </button>
+                        <button 
+                        onClick={() => toggleUnit('days')}
+                        className={`px-4 py-1 rounded-md transition-colors ${unit === 'days' ? 'bg-white text-indigo-900 font-bold' : 'text-indigo-200 hover:text-white'}`}
+                        >
+                        Días
+                        </button>
+                    </div>
+                    </header>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    
+                    {/* Columna Izquierda: Configuración y Fases */}
+                    <div className="lg:col-span-2 space-y-6">
+                        
+                        {/* Panel de Configuración de Tarifas */}
+                        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                        <div className="flex items-center space-x-2 mb-4 text-indigo-700">
+                            <Icon name="Users" size={20} />
+                            <h2 className="font-semibold text-lg">Configuración de Roles y Tarifas</h2>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="p-4 bg-slate-50 rounded-lg border border-slate-100 relative group">
+                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
+                                    Tarifa Consultor ({unit === 'hours' ? 'Hora' : 'Día'})
+                                </label>
+                                <div className="flex items-center">
+                                    <span className="text-slate-400 mr-2">$</span>
+                                    <input 
+                                    type="number" 
+                                    value={unit === 'days' ? rates.consultant * hoursPerDay : rates.consultant} 
+                                    onChange={(e) => handleRateChange('consultant', e.target.value)}
+                                    className="w-full bg-transparent font-mono text-lg font-bold text-slate-700 focus:outline-none"
+                                    />
+                                </div>
+                                {unit === 'days' && (
+                                    <div className="absolute top-2 right-2 text-[10px] bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">
+                                        Calculado x8 horas
+                                    </div>
+                                )}
+                            </div>
+                            <div className="p-4 bg-slate-50 rounded-lg border border-slate-100 relative">
+                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
+                                    Tarifa Desarrollador ({unit === 'hours' ? 'Hora' : 'Día'})
+                                </label>
+                                <div className="flex items-center">
+                                    <span className="text-slate-400 mr-2">$</span>
+                                    <input 
+                                    type="number" 
+                                    value={unit === 'days' ? rates.developer * hoursPerDay : rates.developer} 
+                                    onChange={(e) => handleRateChange('developer', e.target.value)}
+                                    className="w-full bg-transparent font-mono text-lg font-bold text-slate-700 focus:outline-none"
+                                    />
+                                </div>
+                                {unit === 'days' && (
+                                    <div className="absolute top-2 right-2 text-[10px] bg-green-100 text-green-800 px-2 py-0.5 rounded-full">
+                                        Calculado x8 horas
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                        </div>
+
+                        {/* Panel de Estimación por Fases */}
+                        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                        <div className="flex justify-between items-center mb-4">
+                            <div className="flex items-center space-x-2 text-indigo-700">
+                            <Icon name="Briefcase" size={20} />
+                            <h2 className="font-semibold text-lg">Estimación por Fases</h2>
+                            </div>
+                            <div className="text-sm text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
+                            Ingresando valores en: <strong>{unit === 'hours' ? 'Horas' : 'Días'}</strong>
+                            </div>
+                        </div>
+
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="text-xs font-bold text-slate-500 border-b border-slate-200">
+                                <th className="py-3 px-2">Fase del Proyecto</th>
+                                <th className="py-3 px-2 w-32 text-center bg-blue-50 text-blue-700 rounded-t-lg">Consultor</th>
+                                <th className="py-3 px-2 w-32 text-center bg-green-50 text-green-700 rounded-t-lg">Developer</th>
+                                <th className="py-3 px-2 w-24 text-right">Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody className="text-sm">
+                                {phases.map((phase) => {
+                                const multiplier = unit === 'days' ? hoursPerDay : 1;
+                                const phaseCost = (phase.consultant * multiplier * rates.consultant) + (phase.developer * multiplier * rates.developer);
+                                
+                                return (
+                                    <tr key={phase.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                                    <td className="py-3 px-2 font-medium text-slate-700">{phase.name}</td>
+                                    <td className="py-3 px-2 text-center">
+                                        <input 
+                                        type="number" 
+                                        min="0"
+                                        value={phase.consultant} 
+                                        onChange={(e) => handlePhaseChange(phase.id, 'consultant', e.target.value)}
+                                        className="w-20 text-center p-1 border border-slate-200 rounded focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
+                                        />
+                                    </td>
+                                    <td className="py-3 px-2 text-center">
+                                        <input 
+                                        type="number" 
+                                        min="0"
+                                        value={phase.developer} 
+                                        onChange={(e) => handlePhaseChange(phase.id, 'developer', e.target.value)}
+                                        className="w-20 text-center p-1 border border-slate-200 rounded focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
+                                        />
+                                    </td>
+                                    <td className="py-3 px-2 text-right font-mono text-slate-600">
+                                        {formatMoney(phaseCost)}
+                                    </td>
+                                    </tr>
+                                );
+                                })}
+                            </tbody>
+                            <tfoot>
+                                <tr className="bg-slate-50 font-bold text-slate-700">
+                                <td className="py-3 px-2">TOTALES</td>
+                                <td className="py-3 px-2 text-center text-blue-700">
+                                    {unit === 'days' ? (calculations.totalConsultantTime / hoursPerDay).toFixed(1) : calculations.totalConsultantTime} {unit === 'days' ? 'd' : 'h'}
+                                </td>
+                                <td className="py-3 px-2 text-center text-green-700">
+                                    {unit === 'days' ? (calculations.totalDevTime / hoursPerDay).toFixed(1) : calculations.totalDevTime} {unit === 'days' ? 'd' : 'h'}
+                                </td>
+                                <td className="py-3 px-2 text-right text-indigo-700 flex flex-col items-end justify-center">
+                                    <span>{formatMoney(calculations.totalBaseCost)}</span>
+                                </td>
+                                </tr>
+                            </tfoot>
+                            </table>
+                        </div>
+                        </div>
+                    </div>
+
+                    {/* Columna Derecha: Valorización y Resumen */}
+                    <div className="space-y-6">
+                        
+                        {/* Card de Valorización (Markup) */}
+                        <div className="bg-gradient-to-br from-indigo-900 to-indigo-800 text-white p-6 rounded-xl shadow-lg relative overflow-hidden">
+                        <div className="absolute top-0 right-0 p-4 opacity-10">
+                            <Icon name="TrendingUp" size={100} />
+                        </div>
+                        <div className="relative z-10">
+                            <div className="flex items-center space-x-2 mb-4">
+                            <Icon name="DollarSign" size={20} className="text-yellow-400" />
+                            <h2 className="font-semibold text-lg">Estrategia de Precio</h2>
+                            </div>
+                            
+                            <div className="mb-6">
+                            <div className="flex justify-between text-xs font-bold uppercase tracking-wider mb-2">
+                                <span>Factor Multiplicador</span>
+                                <span className="text-yellow-400">{valueFactor.toFixed(2)}x</span>
+                            </div>
+                            <input 
+                                type="range" 
+                                min="1.0" 
+                                max="3.0" 
+                                step="0.05"
+                                value={valueFactor}
+                                onChange={(e) => setValueFactor(parseFloat(e.target.value))}
+                                className="w-full h-2 bg-indigo-600 rounded-lg appearance-none cursor-pointer accent-yellow-400"
+                            />
+                            <div className="flex justify-between text-xs text-indigo-300 mt-1">
+                                <span>Costo (1.0)</span>
+                                <span>Alto Valor (3.0)</span>
+                            </div>
+                            </div>
+
+                            <div className="bg-white/10 p-4 rounded-lg backdrop-blur-sm space-y-3">
+                                <div>
+                                    <div className="text-indigo-200 text-xs uppercase font-bold">Precio Final a Cobrar (CLP)</div>
+                                    <div className="text-3xl font-bold text-white mt-1">
+                                        {formatMoney(calculations.finalPrice)}
+                                    </div>
+                                    <div className="text-xs text-green-300 mt-1 flex items-center">
+                                        <Icon name="ChevronRight" size={12} /> 
+                                        Margen: {formatMoney(calculations.profit)} ({((valueFactor - 1) * 100).toFixed(0)}%)
+                                    </div>
+                                </div>
+                                
+                                {/* SECCIÓN UF */}
+                                <div className="pt-3 border-t border-white/10">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <div className="text-indigo-200 text-xs uppercase font-bold flex items-center gap-1">
+                                            <Icon name="Coins" size={12} />
+                                            Valor en UF (Enteras)
+                                        </div>
+                                        <div className="flex items-center gap-1 bg-indigo-950/50 px-2 py-1 rounded">
+                                            <span className="text-[10px] text-indigo-300">UF Hoy: $</span>
+                                            <input 
+                                                type="number" 
+                                                value={ufValue}
+                                                onChange={(e) => setUfValue(parseFloat(e.target.value) || 0)}
+                                                className="w-16 bg-transparent text-xs text-right text-white font-mono focus:outline-none border-b border-indigo-400/50"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="text-2xl font-bold text-yellow-400 font-mono">
+                                        {formatUF(calculations.totalUF)} UF
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        </div>
+
+                        {/* Resumen de Planificación */}
+                        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                        <div className="flex items-center space-x-2 mb-4 text-indigo-700">
+                            <Icon name="Calendar" size={20} />
+                            <h2 className="font-semibold text-lg">Planificación</h2>
+                        </div>
+                        
+                        <div className="space-y-4">
+                            <div className="flex justify-between items-center p-3 bg-slate-50 rounded-lg">
+                            <div className="flex items-center text-slate-600">
+                                <Icon name="Clock" size={16} className="mr-2" />
+                                <span className="text-sm">Esfuerzo Total</span>
+                            </div>
+                            <span className="font-bold text-slate-800">
+                                {unit === 'days' ? (calculations.totalHours / hoursPerDay).toFixed(1) : calculations.totalHours} {unit === 'days' ? 'días' : 'horas'}
+                            </span>
+                            </div>
+
+                            <div className="flex justify-between items-center p-3 bg-slate-50 rounded-lg">
+                            <div className="flex items-center text-slate-600">
+                                <Icon name="Calendar" size={16} className="mr-2" />
+                                <span className="text-sm">Duración Estimada</span>
+                            </div>
+                            <div className="text-right">
+                                <span className="font-bold text-slate-800 block">{calculations.estimatedWeeks} semanas</span>
+                                <span className="text-xs text-slate-400">aprox. (concurrencia parcial)</span>
+                            </div>
+                            </div>
+                        </div>
+
+                        {/* Visualización Simple de Distribución */}
+                        <div className="mt-6">
+                            <h3 className="text-xs font-bold text-slate-400 uppercase mb-3">Distribución del Esfuerzo</h3>
+                            <div className="w-full bg-slate-100 rounded-full h-4 overflow-hidden flex">
+                            <div 
+                                className="bg-blue-500 h-full" 
+                                style={{ width: `${calculations.totalHours > 0 ? (calculations.totalConsultantTime / calculations.totalHours) * 100 : 0}%` }}
+                                title="Consultoría"
+                            ></div>
+                            <div 
+                                className="bg-green-500 h-full" 
+                                style={{ width: `${calculations.totalHours > 0 ? (calculations.totalDevTime / calculations.totalHours) * 100 : 0}%` }}
+                                title="Desarrollo"
+                            ></div>
+                            </div>
+                            <div className="flex justify-between mt-2 text-xs">
+                            <div className="flex items-center">
+                                <div className="w-2 h-2 bg-blue-500 rounded-full mr-1"></div>
+                                <span className="text-slate-600">Consultor</span>
+                            </div>
+                            <div className="flex items-center">
+                                <div className="w-2 h-2 bg-green-500 rounded-full mr-1"></div>
+                                <span className="text-slate-600">Dev</span>
+                            </div>
+                            </div>
+                        </div>
+
+                        </div>
+                    </div>
+                    </div>
+                </div>
+                </div>
+            );
+        };
+
+        // Renderizar la app
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<NebulaEstimator />);
+    </script>
+</body>
+</html>
